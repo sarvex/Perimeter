@@ -60,12 +60,12 @@ class CppParser:
         if not filedir:
             filedir = '.'
         includes.insert(0, filedir)
-        includes = ['-I "%s"' % self.Unixfy(x) for x in includes]
+        includes = [f'-I "{self.Unixfy(x)}"' for x in includes]
         return ' '.join(includes)
 
 
     def _DefineParams(self):
-        defines = ['-D "%s"' % x for x in self.defines]
+        defines = [f'-D "{x}"' for x in self.defines]
         return ' '.join(defines)
     
     
@@ -78,7 +78,7 @@ class CppParser:
                 return filename
         else:
             name = os.path.basename(header)
-            raise RuntimeError, 'Header file "%s" not found!' % name
+            raise (RuntimeError, f'Header file "{name}" not found!')
     
             
     def AppendTail(self, filename, tail):
@@ -163,8 +163,8 @@ class CppParser:
 
     def CacheFileName(self, interface):
         interface_name = os.path.basename(interface)
-        cache_file = os.path.splitext(interface_name)[0] + '.pystec'
-        cache_file = os.path.join(self.cache_dir, cache_file) 
+        cache_file = f'{os.path.splitext(interface_name)[0]}.pystec'
+        cache_file = os.path.join(self.cache_dir, cache_file)
         return cache_file
         
 

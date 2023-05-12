@@ -34,19 +34,15 @@ class FunctionExporter(Exporter):
 
     def ExportDeclaration(self, decl, unique, codeunit):
         name = self.info.rename or decl.name
-        defs = namespaces.python + 'def("%s", ' % name
+        defs = f'{namespaces.python}def("{name}", '
         wrapper = self.info.wrapper
-        if wrapper:
-            pointer = '&' + wrapper.FullName()
-        else:
-            pointer = decl.PointerDeclaration()
-        defs += pointer            
-        defs += self.PolicyCode()                            
-        overload = self.OverloadName(decl)
-        if overload:
-            defs += ', %s()' % (namespaces.pyste + overload)
+        pointer = f'&{wrapper.FullName()}' if wrapper else decl.PointerDeclaration()
+        defs += pointer
+        defs += self.PolicyCode()
+        if overload := self.OverloadName(decl):
+            defs += f', {namespaces.pyste + overload}()'
         defs += ');'
-        codeunit.Write('module', self.INDENT + defs + '\n')  
+        codeunit.Write('module', self.INDENT + defs + '\n')
         # add the code of the wrapper
         if wrapper and wrapper.code:
             codeunit.Write('declaration', wrapper.code + '\n')
@@ -73,18 +69,16 @@ class FunctionExporter(Exporter):
 
     def PolicyCode(self):
         policy = self.info.policy
-        if policy is not None:
-            assert isinstance(policy, Policy)
-            return ', %s()' % policy.Code() 
-        else:
+        if policy is None:
             return ''
+        assert isinstance(policy, Policy)
+        return f', {policy.Code()}()'
 
 
     def ExportOpaquePointer(self, function, codeunit):
         if self.info.policy == return_value_policy(return_opaque_pointer):
             typename = function.result.name
-            macro = exporterutils.EspecializeTypeID(typename)  
-            if macro:
+            if macro := exporterutils.EspecializeTypeID(typename):
                 codeunit.Write('declaration-outside', macro)
 
 

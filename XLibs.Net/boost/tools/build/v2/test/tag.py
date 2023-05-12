@@ -46,14 +46,13 @@ List("bin/$toolset/release/link-static/b_rt.lib") + \
 List("c/a_rt.exe") + \
 List("bin/$toolset/profile/link-static/a_pt.exe") + \
 List("bin/$toolset/profile/link-static/b_pt.lib") + \
-List("c/a_pt.exe") \
-
+List("c/a_pt.exe")
 variants = "debug release profile link=static,shared"
 
 t.run_build_system(variants)
 t.expect_addition(file_list)
 
-t.run_build_system(variants + " clean")
+t.run_build_system(f"{variants} clean")
 t.expect_removal(file_list)
 
 t.cleanup()

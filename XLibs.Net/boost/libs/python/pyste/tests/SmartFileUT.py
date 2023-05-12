@@ -43,7 +43,7 @@ class SmartFileTest(unittest.TestCase):
         self.assert_(os.path.isfile(self.FILENAME))
         time.sleep(2)
         f = SmartFile(self.FILENAME, 'w')
-        f.write(contents + '_')
+        f.write(f'{contents}_')
         f.close()
         new_file_time = os.path.getmtime(self.FILENAME)
         self.assert_(new_file_time != file_time)

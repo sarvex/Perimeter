@@ -78,16 +78,18 @@ class Generator(object):
         """
         if self in group.generators:
             return None
-        
+
         for i in range(len(self.signature)):
             e = self.signature[i]
             if e[0] == group.target_type:
                 if self.unary:
                     return []
-                if e[1] > group.size or e[2] < group.size:
-                    return None
                 else:
-                    return self.signature[:i] + self.signature[i+1:]
+                    return (
+                        None
+                        if e[1] > group.size or e[2] < group.size
+                        else self.signature[:i] + self.signature[i + 1 :]
+                    )
         return None
 
     def __str__(self):
@@ -99,17 +101,10 @@ class Generator(object):
         return ','.join(self.targets) + ' <- ' + ','.join(self.sources)
 
     def __type_list_rep(self, type_list):
-        if len(type_list) == 1:
-            return repr(type_list[0])
-        else:
-            return repr(type_list)
+        return repr(type_list[0]) if len(type_list) == 1 else repr(type_list)
         
     def __repr__(self):
-        return (
-            self.__module__ + '.' + type(self).__name__ + '(' +
-            self.__type_list_rep(self.sources)
-            + ', ' + self.__type_list_rep(self.targets) + ')'
-            )
+        return f'{self.__module__}.{type(self).__name__}({self.__type_list_rep(self.sources)}, {self.__type_list_rep(self.targets)})'
 
 def _dict_tuple(d):
     l = d.items()
@@ -147,7 +142,7 @@ class GeneratorSet(object):
         }
 
         """
-        if not generator in self.all_generators:
+        if generator not in self.all_generators:
             self.all_generators[generator] = 1
             for t in generator.sources:
                 if t.endswith('*'):
@@ -170,14 +165,10 @@ class GeneratorSet(object):
         return self.generators_by_type.setdefault(t,[])
 
     def __str__(self):
-        # import pprint
-        # return pprint.pformat(self.generators_by_type)
-    
-        s = []
-        
-        for k,v in _sorted(self.generators_by_type.items()):
-            s += [ '  ' + k + ':\n    ' + '\n    '.join([ str(x) for x in v ]) ]
-
+        s = [
+            f'  {k}' + ':\n    ' + '\n    '.join([str(x) for x in v])
+            for k, v in _sorted(self.generators_by_type.items())
+        ]
         return '{\n' + '\n'.join(s) + '\n}'
 
 def _dicts_intersect(d1, d2):
@@ -189,13 +180,8 @@ def _dicts_intersect(d1, d2):
     >>> assert not _dicts_intersect({2:0}, {1:0, 3:0})
     """
     if len(d2) < len(d1):
-        tmp = d1
-        d1 = d2
-        d2 = tmp
-    for k in d1.iterkeys():
-        if k in d2:
-            return True
-    return False
+        d1, d2 = d2, d1
+    return any(k in d2 for k in d1.iterkeys())
     
 class TargetTypeGroup(object):
     instances = 0
@@ -228,23 +214,19 @@ class TargetTypeGroup(object):
 
         self.generators = { generator : 1 } # it doesn't hurt to store None here
         ignored = [ self.generators.update(p.generators) for p in parents ]
-        
+
         self.__constituents = None
         self.__extra_targets = None
-        
+
         TargetTypeGroup.instances += 1
 
-        if generator:
-            self.moves = { (id(generator),id(parents)) : 1 }
-        else:
-            self.moves = {}
-        
+        self.moves = { (id(generator),id(parents)) : 1 } if generator else {}
         if not parents:
             self.consumed_sources = {self:1}
             self.__extra_targets = ()
         else:
             ignored = [ self.moves.update(p.moves) for p in parents ]
-            
+
             if len(parents) == 1:
                 self.consumed_sources = parents[0].consumed_sources
             else:
@@ -258,7 +240,7 @@ class TargetTypeGroup(object):
         if self.__constituents is None:
             self.__constituents = {self:1}
             for c in self.parents:
-                self.__constituents.update(c.constituents)
+                self.__constituents |= c.constituents
         return self.__constituents
             
     constituents = property(__get_constituents)
@@ -281,16 +263,11 @@ class TargetTypeGroup(object):
     # search States
     def __get_extra_targets(self):
         if self.__extra_targets is None:
-            
             if len(self.parents) == 1 and not self.siblings:
                 self.__extra_targets = self.parents[0].extra_targets
             else:
                 # all siblings are created incidentally
-                if self.siblings:
-                    t = tuple([s for s in self.siblings if s != self])
-                else:
-                    t = ()
-                    
+                t = tuple(s for s in self.siblings if s != self) if self.siblings else ()
                 # Any groups created incidentally as part of generating my
                 # parents are also incidental to my generation
                 for c in self.parents:
@@ -311,7 +288,7 @@ class TargetTypeGroup(object):
         self.siblings = sibs
 
     def __repr__(self):
-        return '%s.%s(#%s$%s)' % (self.size,self.target_type,self.id,self.cost)
+        return f'{self.size}.{self.target_type}(#{self.id}${self.cost})'
     
     def is_compatible_with(self, other):
         """True iff self and other can be used to trigger a generator.
@@ -336,10 +313,7 @@ class TargetTypeGroup(object):
     def all_compatible(self, others):
         """True iff self is_compatible with every element of other
         """
-        for o in others:
-            if not self.is_compatible_with(o):
-                return False
-        return True
+        return all(self.is_compatible_with(o) for o in others)
 
     def atoms(self):
         """If this group was formed by combining other groups without
@@ -363,10 +337,7 @@ class TargetTypeGroup(object):
     def consumes(self, others):
         """True iff not self is_compatible with every element of other
         """
-        for o in others:
-            if self.is_compatible_with(o):
-                return False
-        return True
+        return not any(self.is_compatible_with(o) for o in others)
     
 def _string_multiset(s):
     x = {}
@@ -401,41 +372,34 @@ def parent_sets(chosen, signature, all_groups, generator):
         # there are no ways, we will fall off the end here and the
         # ultimate result will be empty.
         t, min, max = signature[0]
-        
+
         if min == 0:
-            for s in parent_sets(chosen, signature[1:], all_groups, generator):
-                yield s
-            
+            yield from parent_sets(chosen, signature[1:], all_groups, generator)
         for g in all_groups[t]:
 
             # can only use a generator once in any path
             if generator in g.generators:
                 continue
-            
+
             if (g.size >= min and g.size <= max and
                 g.all_compatible(chosen)): 
                 
-                for s in parent_sets(
+                yield from parent_sets(
                     chosen + (g,), signature[1:], all_groups, generator
-                    ):
-                    yield s
+                )
         
 debug = None
 
 def _sort_tuple(t):
     """copies the given sequence into a new tuple in sorted order"""
-    l = list(t)
-    l.sort()
+    l = sorted(t)
     return tuple(l)
 
 def _sequence_of_strings(s_or_l):
     """if the argument is a string, wraps a tuple around it.
     Otherwise, returns the argument untouched
     """
-    if isinstance(s_or_l, type('')):
-        return (s_or_l,)
-    else:
-        return s_or_l
+    return (s_or_l, ) if isinstance(s_or_l, type('')) else s_or_l
 
 def _examine_edge(states, queue, g):
     """Handle a possible new state in the search.
@@ -589,7 +553,7 @@ def optimal_graphs(target_type, source_groups, generators):
         
                     
 def graph(group, indent = 0, visited = None):
-    
+
     """Produce a string representation of the search graph
     that produced the given group.
     """
@@ -601,15 +565,14 @@ def graph(group, indent = 0, visited = None):
         s += '...\n'
     else:
         visited[group] = True
-        s += '[%s]' % group.generator
+        s += f'[{group.generator}]'
 
         if group.ambiguous:
             s += ' *ambiguous* '
             if type(group.ambiguous) is not type(1):
-                s += 'due to %s' % group.ambiguous
+                s += f'due to {group.ambiguous}'
         if group.siblings:
-            s += ' siblings ' + str([sib for sib in group.siblings if
-                                     sib != group])
+            s += f' siblings {[sib for sib in group.siblings if sib != group]}'
         s += '\n' + '\n'.join(
             [graph(g,indent+1,visited) for g in group.parents])
     return s

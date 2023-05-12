@@ -45,17 +45,12 @@ if os.name == 'posix':
     def _failed(self, status = 0):
         if self.status is None:
             return None
-        if os.WIFSIGNALED(status):
-            return None
-        return _status(self) != status
+        return None if os.WIFSIGNALED(status) else _status(self) != status
     def _status(self):
-        if os.WIFEXITED(self.status):
-            return os.WEXITSTATUS(self.status)
-        else:
-            return None
+        return os.WEXITSTATUS(self.status) if os.WIFEXITED(self.status) else None
 elif os.name == 'nt':
     def _failed(self, status = 0):
-        return not self.status is None and self.status != status
+        return self.status is not None and self.status != status
     def _status(self):
         return self.status
 
@@ -212,7 +207,7 @@ class Tester(TestCmd.TestCmd):
 
     def rm(self, names):
         self.wait_for_time_change()
-        if not type(names) == types.ListType:
+        if type(names) != types.ListType:
             names = [names]
 
         # Avoid attempts to remove current dir
@@ -316,10 +311,7 @@ class Tester(TestCmd.TestCmd):
     def read_and_strip(self, name):
         lines = open(self.native_file_name(name), "rb").readlines()
         result = string.join(map(string.rstrip, lines), "\n")
-        if lines and lines[-1][-1] == '\n':
-            return result + '\n'
-        else:
-            return result
+        return result + '\n' if lines and lines[-1][-1] == '\n' else result
     
     def fail_test(self, condition, dump_stdio = 1, *args):
         # If test failed, print the difference        
@@ -484,22 +476,19 @@ class Tester(TestCmd.TestCmd):
 
     # Helpers
     def mul(self, *arguments):
-        if len(arguments) == 0:
-                return None
-        else:
-                here = arguments[0]
-                if type(here) == type(''):
-                        here = [here]
+        if not arguments:
+            return None
+        here = arguments[0]
+        if type(here) == type(''):
+                here = [here]
 
-                if len(arguments) > 1:
-                        there = apply(self.mul, arguments[1:])
-                        result = []
-                        for i in here:
-                                for j in there:
-                                        result.append(i + j)
-                        return result
-                else:
-                        return here
+        if len(arguments) <= 1:
+            return here
+        there = apply(self.mul, arguments[1:])
+        result = []
+        for i in here:
+            result.extend(i + j for j in there)
+        return result
 
 
 
@@ -555,10 +544,9 @@ class List:
             elements = string.split(s)
         else:
             elements = s;
-            
-        self.l = []            
-        for e in elements:
-            self.l.append(string.replace(e, '\001', ' '))
+
+        self.l = []
+        self.l.extend(string.replace(e, '\001', ' ') for e in elements)
 
     def __len__(self):
         return len(self.l)
@@ -576,9 +564,7 @@ class List:
         return str(self.l)
 
     def __repr__(self):
-        return ( self.__module__ + '.List('
-                 + repr(string.join(self.l, ' '))
-                 + ')')
+        return ((f'{self.__module__}.List(' + repr(string.join(self.l, ' '))) + ')')
 
     def __mul__(self, other):        
         result = List()

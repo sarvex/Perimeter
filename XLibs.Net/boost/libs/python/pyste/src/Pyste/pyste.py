@@ -65,19 +65,16 @@ def RecursiveIncludes(include):
 
     
 def GetDefaultIncludes():
-    if 'INCLUDE' in os.environ:
-        include = os.environ['INCLUDE']
-        return include.split(os.pathsep)
-    else:
+    if 'INCLUDE' not in os.environ:
         return []
+    include = os.environ['INCLUDE']
+    return include.split(os.pathsep)
 
 
 def ProcessIncludes(includes):
     if sys.platform == 'win32':
-        index = 0
-        for include in includes:
+        for index, include in enumerate(includes):
             includes[index] = include.replace('\\', '/')
-            index += 1
 
 
 def ReadFileList(filename):
@@ -85,8 +82,7 @@ def ReadFileList(filename):
     files = []
     try:
         for line in f:
-            line = line.strip()
-            if line:
+            if line := line.strip():
                 files.append(line)
     finally:
         f.close()
@@ -184,19 +180,21 @@ def ParseArguments():
 
 
 def PCHInclude(*headers):
-    code = '\n'.join(['#include <%s>' % x for x in headers])
+    code = '\n'.join([f'#include <{x}>' for x in headers])
     infos.CodeInfo(code, 'pchinclude')
 
     
 def CreateContext():
     'create the context where a interface file will be executed'
-    context = {}
-    context['Import'] = Import
-    # infos
-    context['Function'] = infos.FunctionInfo
-    context['Class'] = infos.ClassInfo
-    context['Include'] = lambda header: infos.CodeInfo('#include <%s>\n' % header, 'include')
-    context['PCHInclude'] = PCHInclude
+    context = {
+        'Import': Import,
+        'Function': infos.FunctionInfo,
+        'Class': infos.ClassInfo,
+        'Include': lambda header: infos.CodeInfo(
+            '#include <%s>\n' % header, 'include'
+        ),
+        'PCHInclude': PCHInclude,
+    }
     context['Template'] = infos.ClassTemplateInfo
     context['Enum'] = infos.EnumInfo
     context['AllFromHeader'] = infos.HeaderInfo
@@ -271,13 +269,16 @@ _imported_count = {}  # interface => count
 
 def ExecuteInterface(interface):
     old_interface = exporters.current_interface
+    if (
+        not os.path.exists(interface)
+        and old_interface
+        and os.path.exists(old_interface)
+    ):
+        d = os.path.dirname(old_interface)
+        interface = os.path.join(d, interface)
     if not os.path.exists(interface):
-        if old_interface and os.path.exists(old_interface):
-            d = os.path.dirname(old_interface)
-            interface = os.path.join(d, interface)
-    if not os.path.exists(interface):
-        raise IOError, "Cannot find interface file %s."%interface
-    
+        raise (IOError, f"Cannot find interface file {interface}.")
+
     _imported_count[interface] = _imported_count.get(interface, 0) + 1
     exporters.current_interface = interface
     context = CreateContext()
@@ -386,7 +387,7 @@ def ExpandTypedefs(decls, exported_names):
     '''Check if the names in exported_names are a typedef, and add the real class 
     name in the dict.
     '''
-    for name in exported_names.keys():
+    for _ in exported_names.keys():
         for decl in decls:
             if isinstance(decl, declarations.Typedef):
                 exported_names[decl.type.FullName()] = None

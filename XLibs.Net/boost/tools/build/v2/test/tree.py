@@ -105,15 +105,11 @@ def dump_tree(t):
 
 def traverse_tree(t, parent_name=""):
     """ Returns the list of all names in tree. """
-    if parent_name:
-        full_node_name = parent_name + "/" + t.name
-    else:
-        full_node_name = t.name
-
+    full_node_name = f"{parent_name}/{t.name}" if parent_name else t.name
     if (t.children is None):
         result = [full_node_name]
     else:
-        result = [full_node_name + "/"]
+        result = [f"{full_node_name}/"]
         for i in t.children:
             result.extend(traverse_tree(i, full_node_name))
     return result

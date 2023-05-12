@@ -41,7 +41,9 @@ t.fail_test(find(t.stdout(), "...skipped a for lack of foo.h...") == -1)
 
 t.rm('b')
 # Now test that if target 'c' also depends on 'b', then it won't be built, as well.
-t.run_build_system("-f-", stdin=code + " copy c : b ; DEPENDS c : b ; DEPENDS all : c ; ")
+t.run_build_system(
+    "-f-", stdin=f"{code} copy c : b ; DEPENDS c : b ; DEPENDS all : c ; "
+)
 t.fail_test(find(t.stdout(), "...skipped c for lack of foo.h...") == -1)
 
 
@@ -70,11 +72,11 @@ def mk_right_order_func(s1, s2):
 right_order = mk_right_order_func("create-foo", "copy a")
 
 t.rm(["a", "b", "foo.h"])
-t.run_build_system("-d+2 -f-", stdin=code + " DEPENDS all : foo.h ;")
+t.run_build_system("-d+2 -f-", stdin=f"{code} DEPENDS all : foo.h ;")
 t.fail_test(not right_order(t.stdout()))
 
 t.rm(["a", "b", "foo.h"])
-t.run_build_system("-d+2 -f-", stdin=" DEPENDS all : foo.h ; " + code)
+t.run_build_system("-d+2 -f-", stdin=f" DEPENDS all : foo.h ; {code}")
 t.fail_test(not right_order(t.stdout()))
 
 # Now foo.h exists. Test include from b -> foo.h -> bar.h -> biz.h
@@ -95,11 +97,11 @@ create-biz biz.h ;
 """
 t.rm(["b"])
 right_order = mk_right_order_func("create-biz", "copy a")
-t.run_build_system("-d+2 -f-", stdin=code + " DEPENDS all : biz.h ;")
+t.run_build_system("-d+2 -f-", stdin=f"{code} DEPENDS all : biz.h ;")
 t.fail_test(not right_order(t.stdout()))
 
 t.rm(["a", "biz.h"])
-t.run_build_system("-d+2 -f-", stdin=" DEPENDS all : biz.h ; " + code)
+t.run_build_system("-d+2 -f-", stdin=f" DEPENDS all : biz.h ; {code}")
 t.fail_test(not right_order(t.stdout()))           
 
 

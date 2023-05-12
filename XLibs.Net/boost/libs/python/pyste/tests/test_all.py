@@ -12,18 +12,15 @@ import time
 if sys.platform == 'win32':
     
     includes = '-ID:/programming/libraries/boost-cvs/boost -ID:/Bin/Python/include'
-    build_pyste_cmd = 'python ../src/Pyste/pyste.py --cache-dir=cache %s ' % includes
-    compile_single_cmd = 'icl /nologo /GR /GX -c %s -I. ' % includes
+    build_pyste_cmd = f'python ../src/Pyste/pyste.py --cache-dir=cache {includes} '
+    compile_single_cmd = f'icl /nologo /GR /GX -c {includes} -I. '
     link_single_cmd = 'link /nologo /DLL '\
         '/libpath:D:/programming/libraries/boost-cvs/lib /libpath:D:/Bin/Python/libs '\
         'boost_python.lib python23.lib /out:_%s.dll '
     obj_ext = 'obj'
-    
-#=============================================================================
-# linux configuration
-#============================================================================= 
+
 elif sys.platform == 'linux2':
-    
+
     build_pyste_cmd = 'python ../src/Pyste/pyste.py -I. '
     compile_single_cmd = 'g++ -shared -c -I. -I/usr/include/python2.2 '
     link_single_cmd = 'g++ -shared -o _%s.so -lboost_python '
@@ -32,31 +29,32 @@ elif sys.platform == 'linux2':
     
 
 def build_pyste(multiple, module): 
-    rest = '%s --module=_%s %s.pyste' % (multiple, module, module)
+    rest = f'{multiple} --module=_{module} {module}.pyste'
     execute(build_pyste_cmd + rest)
 
 
 def compile_single(module):
     module_obj = ''
-    if os.path.isfile(module+'.cpp'):
+    if os.path.isfile(f'{module}.cpp'):
         execute(compile_single_cmd + module+'.cpp')
-        module_obj = module + '.' + obj_ext
-    execute(compile_single_cmd + ('_%s.cpp' % module))
+        module_obj = f'{module}.{obj_ext}'
+    execute(f'{compile_single_cmd}_{module}.cpp')
     link = link_single_cmd % module
-    execute(link + ('_%s.%s ' % (module, obj_ext)) + module_obj)
+    execute(f'{link}_{module}.{obj_ext} {module_obj}')
 
 
 def compile_multiple(module):
     module_obj = ''
-    if os.path.isfile(module+'.cpp'):
+    if os.path.isfile(f'{module}.cpp'):
         execute(compile_single_cmd + module+'.cpp')
-        module_obj = module + '.' + obj_ext
-    files = glob.glob('_%s/*.cpp' % module)
+        module_obj = f'{module}.{obj_ext}'
+    files = glob.glob(f'_{module}/*.cpp')
     for f in files:
         execute(compile_single_cmd + f)
     def basename(name):
         return os.path.basename(os.path.splitext(name)[0])
-    objs = [basename(x) + '.' + obj_ext for x in files]
+
+    objs = [f'{basename(x)}.{obj_ext}' for x in files]
     objs.append(module_obj)
     execute((link_single_cmd % module) + ' '.join(objs))
 
@@ -73,9 +71,7 @@ def run_tests():
 def cleanup():
     modules = get_modules()
     extensions = '*.dll *.pyc *.obj *.exp *.lib *.o *.so'
-    files = []
-    for module in modules:
-        files.append('_' + module + '.cpp')
+    files = [f'_{module}.cpp' for module in modules]
     for ext in extensions.split():
         files += glob.glob(ext)
     files.append('build.log')
@@ -86,7 +82,7 @@ def cleanup():
 
     for module in modules:
         try:
-            shutil.rmtree('_' + module)
+            shutil.rmtree(f'_{module}')
         except OSError: pass
 
     

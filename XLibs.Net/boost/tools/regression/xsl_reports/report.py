@@ -45,39 +45,35 @@ log = stdlog
 # log = lambda x: x
 
 def system( commands ):
-    f = open( "tmp.cmd", "w" )
-    f.write( string.join( commands, "\n" ) )
-    f.close()
-    rc = os.system( "tmp.cmd" )
-    return rc
+    with open( "tmp.cmd", "w" ) as f:
+        f.write( string.join( commands, "\n" ) )
+    return os.system( "tmp.cmd" )
 
 
 def checked_system( commands ):
-    rc = system( commands ) 
-    if 0 != rc : raise failure_exception( rc )
+    rc = system( commands )
+    if rc != 0: raise failure_exception( rc )
     return rc
 
 
 def set_char( str, index, char ):
-    return str[ 0 : index ] + char + str[ index + 1: ]
+    return str[:index] + char + str[ index + 1: ]
 
 
 def process_xml_file( input_file, output_file ):
     log( "Processing test log \"%s\"" % input_file )
-    
-    f = open( input_file, "r" )
-    xml = f.readlines();
-    f.close()
-    
+
+    with open( input_file, "r" ) as f:
+        xml = f.readlines();
     ascii_chars = ''.join(map(chr, range(0,128)))
     nonascii_chars = ''.join(map(chr, range(128,256)))
     translated_ascii_chars = ''.join( map( lambda x: "?", range(128,256)))
     for i in string.printable:
         if ( ord( i ) < 128 and ord(i) not in ( 12, ) ):
             translated_ascii_chars = set_char( translated_ascii_chars, ord(i), i )
-        
+
     translated_nonascii_chars = ''.join( map( lambda x: "?", range(128,256) ) )
-    
+
     mask_nonascii_translation_table = string.maketrans( ascii_chars + nonascii_chars
                                                         , translated_ascii_chars + translated_nonascii_chars
                                                         )
@@ -95,35 +91,34 @@ def process_test_log_files( output_file, dir, names ):
 def collect_test_logs( input_dirs, output_file ):
     __log__ = 1
     log( "Collecting test logs ..." )
-    f = open( output_file, "w+" )
-    f.write( "<tests>\n" );
-    for input_dir in input_dirs:
-        os.path.walk( input_dir, process_test_log_files, f );
-    f.write( "</tests>\n" );
-    f.close()
+    with open( output_file, "w+" ) as f:
+        f.write( "<tests>\n" );
+        for input_dir in input_dirs:
+            os.path.walk( input_dir, process_test_log_files, f );
+        f.write( "</tests>\n" );
 
 
 def xalan( xml_file, xsl_file,output_file, parameters = None ):
     transform_command = "xalan"
-    transform_command = transform_command  + ' -o "%s" ' %  output_file
+    transform_command += f' -o "{output_file}" '
     if parameters is not None:
          for i in parameters: 
               transform_command = transform_command + ' -p %s "\'%s\'" ' % ( i, parameters[ i ] )
-    transform_command = transform_command  + ' "%s"' %  xml_file
-    transform_command = transform_command  + ' "%s"' %  xsl_file
+    transform_command = f'{transform_command} "{xml_file}"'
+    transform_command = f'{transform_command} "{xsl_file}"'
     log( transform_command )
     os.system( transform_command )    
                   
 
 def msxsl( xml_file, xsl_file, output_file, parameters = None ):
     transform_command = "msxsl"
-    transform_command = transform_command  + ' "%s"' %  xml_file
-    transform_command = transform_command  + ' "%s"' %  xsl_file
-    transform_command = transform_command  + ' -o  "%s" ' %  output_file
+    transform_command += f' "{xml_file}"'
+    transform_command += f' "{xsl_file}"'
+    transform_command += f' -o  "{output_file}" '
 
     if parameters is not None:
-         for i in parameters: 
-              transform_command = transform_command + ' %s="%s" ' % ( i, parameters[ i ] )
+        for i in parameters: 
+            transform_command = f'{transform_command} {i}="{parameters[i]}" '
 
     log( transform_command )
     os.system( transform_command )    
@@ -133,15 +128,15 @@ def libxslt( xml_file, xsl_file, output_file, parameters = None ):
     if sys.platform == "win32":
         os.chdir( os.path.dirname( xsl_file ) )
     transform_command = "xsltproc"
-    transform_command = transform_command + ' -o ' + "%s" % output_file
+    transform_command = f'{transform_command} -o ' + f"{output_file}"
 
     if parameters is not None:
          for i in parameters: 
              parameters[i] = parameters[i].replace( "\\", "/" )
              transform_command = transform_command + ' --param %s "\'%s\'" ' % ( i, parameters[ i ] )
 
-    transform_command = transform_command + ' "%s" ' % xsl_file
-    transform_command = transform_command + ' "%s" ' % xml_file
+    transform_command = f'{transform_command} "{xsl_file}" '
+    transform_command = f'{transform_command} "{xml_file}" '
     log( transform_command )
     os.system( transform_command )    
 
@@ -170,21 +165,21 @@ def make_result_pages( test_results_file
                        ):
     log( "Producing the reports..." )
     __log__ = 1
-    
+
     output_dir = os.path.join( results_dir, result_prefix )
     if not os.path.exists( output_dir ):
         os.makedirs( output_dir )
-        
+
     xslt_proc = registered_xsltprocs[ xslt_proc_name ]
-    
+
     if comment_file != "":
         comment_file = os.path.abspath( comment_file )
-        
+
     if expected_results_file != "":
         expected_results_file = os.path.abspath( expected_results_file )
     else:
         expected_results_file = os.path.abspath( map_path( "empty_expected_results.xml" ) )
-        
+
 
     extended_test_results = os.path.join( output_dir, "extended_test_results.xml" )
     if "x" in reports:    
@@ -196,11 +191,11 @@ def make_result_pages( test_results_file
                  )
 
     links = os.path.join( output_dir, "links.html"  )
-    
+
     test_output_dir  = os.path.join( output_dir, "output"  )
     if not os.path.exists(  test_output_dir ):
         os.makedirs( test_output_dir )
-        
+
     if "l" in reports:        
         log( "    Making test output files..." )
         xslt_proc( extended_test_results
@@ -227,37 +222,41 @@ def make_result_pages( test_results_file
                      , "explicit_markup_file" : failures_markup_file
                      }
                    )
-                   
+
     for mode in ( "developer", "user" ):
-        if mode[0] + "d" in reports:
-            log( "    Making detailed %s  report..." % mode )
-            xslt_proc(  extended_test_results
-                        , xsl_path( "result_page.xsl" )
-                        , os.path.join( output_dir, "%s_%s" % ( mode, "result_page.html" ) )
-                        , { "links_file": "links.html"
-                            , "mode": mode
-                            , "source": source
-                            , "run_date": run_date 
-                            , "comment_file": comment_file
-                            , "expected_results_file": expected_results_file
-                            , "explicit_markup_file" : failures_markup_file
-                            }
-                        );
+        if f"{mode[0]}d" in reports:
+            log(f"    Making detailed {mode}  report...")
+            xslt_proc(
+                extended_test_results,
+                xsl_path("result_page.xsl"),
+                os.path.join(output_dir, f"{mode}_result_page.html"),
+                {
+                    "links_file": "links.html",
+                    "mode": mode,
+                    "source": source,
+                    "run_date": run_date,
+                    "comment_file": comment_file,
+                    "expected_results_file": expected_results_file,
+                    "explicit_markup_file": failures_markup_file,
+                },
+            );
 
 
     for mode in ( "developer", "user" ):
-        if mode[0] + "s" in reports:
-            log( "    Making summary %s  report..." % mode )
-            xslt_proc(  extended_test_results
-                        , xsl_path( "summary_page.xsl" )
-                        , os.path.join( output_dir, "%s_%s" % ( mode, "summary_page.html" ) )
-                        , { "mode" : mode 
-                            , "source": source
-                            , "run_date": run_date 
-                            , "comment_file": comment_file
-                            , "explicit_markup_file" : failures_markup_file
-                            }
-                        );
+        if f"{mode[0]}s" in reports:
+            log(f"    Making summary {mode}  report...")
+            xslt_proc(
+                extended_test_results,
+                xsl_path("summary_page.xsl"),
+                os.path.join(output_dir, f"{mode}_summary_page.html"),
+                {
+                    "mode": mode,
+                    "source": source,
+                    "run_date": run_date,
+                    "comment_file": comment_file,
+                    "explicit_markup_file": failures_markup_file,
+                },
+            );
 
     if "e" in reports:
         log( "    Generating expected_results ..." )
@@ -265,7 +264,7 @@ def make_result_pages( test_results_file
                    , xsl_path( "produce_expected_results.xsl" )
                    , os.path.join( output_dir, "expected_results.xml" )
                    )
-    
+
     shutil.copyfile( xsl_path( "master.css" ),  os.path.join( output_dir, "master.css" ) )
 
 

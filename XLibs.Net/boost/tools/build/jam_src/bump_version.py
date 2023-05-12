@@ -14,22 +14,24 @@ import string
 import os
 
 def spec(version):
-    os.system("perl -pi -e 's|^Version:.*|Version: %s|' boost-jam.spec" %
-              string.join(version, "."))
+    os.system(
+        f"""perl -pi -e 's|^Version:.*|Version: {string.join(version, ".")}|' boost-jam.spec"""
+    )
 
 def build_jam(version):
     os.system("perl -pi -e 's|^VERSION = .* ;|VERSION = %s\$(.)%s\$(.)%s ;|' build.jam"
               % (version[0], version[1], version[2]))
 
 def index_html(version):
-    os.system("perl -pi -e 's|This is version .* of BJam|This is version %s of BJam|' index.html"
-              % string.join(version, "."))
+    os.system(
+        f"""perl -pi -e 's|This is version .* of BJam|This is version {string.join(version, ".")} of BJam|' index.html"""
+    )
 
 def jam_c(version):
     re = "\\*major_version = .*, \\*minor_version = .*, \\*changenum = .*";
     new = ('*major_version = "%02d", *minor_version = "%02d", *changenum = "%02d";' %
         (int(version[0]), int(version[1]), int(version[2])))
-    os.system("perl -pi -e 's|%s|%s|' jam.c" % (re, new))
+    os.system(f"perl -pi -e 's|{re}|{new}|' jam.c")
 
 def patchlevel(version):
     os.system("perl -pi -e 's|VERSION .*|VERSION \"%s\"|' patchlevel.h" %

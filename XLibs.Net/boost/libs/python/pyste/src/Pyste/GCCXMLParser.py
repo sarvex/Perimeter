@@ -59,7 +59,7 @@ class GCCXMLParser(object):
 
         
     def ParseElement(self, id, element):
-        method = 'Parse' + element.tag
+        method = f'Parse{element.tag}'
         if hasattr(self, method):
             func = getattr(self, method)
             func(id, element)
@@ -69,12 +69,12 @@ class GCCXMLParser(object):
             
     def GetElementsFromXML(self,filename):
         'Extracts a dictionary of elements from the gcc_xml file.'
-        
+
         tree = ElementTree()
         try:
             tree.parse(filename)
         except ExpatError:
-            raise InvalidXMLError, 'Not a XML file: %s' % filename
+            raise (InvalidXMLError, f'Not a XML file: {filename}')
 
         root = tree.getroot()
         if root.tag != 'GCC_XML':
@@ -84,8 +84,7 @@ class GCCXMLParser(object):
         elementlist = root.getchildren()
         elements = {}
         for element in elementlist:
-            id = element.get('id')
-            if id:
+            if id := element.get('id'):
                 elements[id] = element, None
         return elements
 
@@ -94,16 +93,15 @@ class GCCXMLParser(object):
         if id not in self.elements:
             if id == '_0':
                 raise InvalidContextError, 'Invalid context found in the xml file.'
-            else: 
-                msg = 'ID not found in elements: %s' % id
-                raise ParserError, msg
+            msg = f'ID not found in elements: {id}'
+            raise ParserError, msg
 
         elem, decl = self.elements[id]
         if decl is None:
             self.ParseElement(id, elem)
             elem, decl = self.elements[id]
-            if decl is None:
-                raise ParserError, 'Could not parse element: %s' % elem.tag
+        if decl is None:
+            raise (ParserError, f'Could not parse element: {elem.tag}')
         return decl
     
 
@@ -146,15 +144,14 @@ class GCCXMLParser(object):
 
         
     def ParseUnknown(self, id, element):
-        name = '__Unknown_Element_%s' % id
+        name = f'__Unknown_Element_{id}'
         decl = Unknown(name)
         self.Update(id, decl)
         
         
     def ParseNamespace(self, id, element):
         namespace = element.get('name')
-        context = element.get('context')
-        if context:
+        if context := element.get('context'):
             outer = self.GetDecl(context)
             if not outer.endswith('::'):
                 outer += '::'
@@ -202,11 +199,7 @@ class GCCXMLParser(object):
         if exception_list is None:
             return None
 
-        exceptions = []
-        for t in exception_list.split():
-            exceptions.append(self.GetType(t))
-
-        return exceptions
+        return [self.GetType(t) for t in exception_list.split()]
 
 
     def ParseFunction(self, id, element, functionType=Function):

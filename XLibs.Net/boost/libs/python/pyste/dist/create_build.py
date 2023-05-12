@@ -22,14 +22,14 @@ def main():
     except ImportError:
         pyxml = ''
     # create exe
-    status = os.system('python setup.py py2exe %s >& build.log' % pyxml)
+    status = os.system(f'python setup.py py2exe {pyxml} >& build.log')
     if status != 0:
         raise RuntimeError, 'Error creating EXE'
 
     # create distribution
     import pyste
     version = pyste.__VERSION__
-    zip = ZipFile('pyste-%s.zip' % version, 'w', ZIP_DEFLATED)    
+    zip = ZipFile(f'pyste-{version}.zip', 'w', ZIP_DEFLATED)
     # include the base files
     dist_dir = 'dist/pyste'
     for basefile in os.listdir(dist_dir):

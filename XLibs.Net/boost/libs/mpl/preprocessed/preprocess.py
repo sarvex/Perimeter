@@ -18,12 +18,12 @@ import os
 import sys
 
 def process( file, boost_root, dst_dir, mode ):
-    file_path = "%s.hpp" % os.path.splitext( file )[0]
+    file_path = f"{os.path.splitext(file)[0]}.hpp"
 
-    os.system( "preprocess %s %s %s %s" % ( boost_root, mode, file, file_path ) )
-    os.rename( file_path, "%s.tmp" % file_path )
-    os.system( "pp.py %s.tmp %s" % ( file_path, file_path ) )
-    os.remove( "%s.tmp" % file_path )
+    os.system(f"preprocess {boost_root} {mode} {file} {file_path}")
+    os.rename(file_path, f"{file_path}.tmp")
+    os.system(f"pp.py {file_path}.tmp {file_path}")
+    os.remove(f"{file_path}.tmp")
 
     filename = os.path.basename(file_path)
     dst_dir = os.path.join( dst_dir, mode )
@@ -31,7 +31,7 @@ def process( file, boost_root, dst_dir, mode ):
 
     if os.path.exists( dst_file ):
         shutil.copymode( filename, dst_file )
-        
+
     shutil.copy( filename, dst_dir )
     os.remove( filename )
 
@@ -42,9 +42,8 @@ def process_all( root, boost_root, dst_dir, mode ):
         path = os.path.join( root, file )
         if os.path.splitext( file )[1] == ".cpp":
             process( path, boost_root, dst_dir, mode )
-        else:
-            if os.path.isdir( path ):
-                process_all( path, boost_root, dst_dir, mode )
+        elif os.path.isdir( path ):
+            process_all( path, boost_root, dst_dir, mode )
 
 
 def main( all_modes, src_dir, dst_dir ):

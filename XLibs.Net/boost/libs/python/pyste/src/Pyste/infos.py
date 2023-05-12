@@ -119,10 +119,13 @@ class ClassTemplateInfo(DeclarationInfo):
         tail = 'typedef %s< %s > %s;\n' % (self._Attribute('name'), types, rename)
         tail += 'void __instantiate_%s()\n' % rename
         tail += '{ sizeof(%s); }\n\n' % rename
-        # create a ClassInfo
-        class_ = ClassInfo(rename, self._Attribute('include'), tail, self,
-                           exporter_class = self._exporter_class)
-        return class_
+        return ClassInfo(
+            rename,
+            self._Attribute('include'),
+            tail,
+            self,
+            exporter_class=self._exporter_class,
+        )
 
 
     def __call__(self, types, rename=None):

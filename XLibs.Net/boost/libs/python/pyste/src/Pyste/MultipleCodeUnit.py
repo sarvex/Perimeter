@@ -29,12 +29,12 @@ class MultipleCodeUnit(object):
     
     def _FunctionName(self, interface_file):
         name = os.path.splitext(interface_file)[0]
-        return 'Export_%s' % utils.makeid(name)
+        return f'Export_{utils.makeid(name)}'
     
 
     def _FileName(self, interface_file):
         filename = os.path.basename(interface_file)
-        filename = '_%s.cpp' % os.path.splitext(filename)[0] 
+        filename = f'_{os.path.splitext(filename)[0]}.cpp'
         return os.path.join(self.outdir, filename)
 
     
@@ -51,7 +51,7 @@ class MultipleCodeUnit(object):
                 codeunit = self.codeunits[filename]
             except KeyError:
                 codeunit = SingleCodeUnit(None, filename)
-                codeunit.module_definition = 'void %s()' % function
+                codeunit.module_definition = f'void {function}()'
                 self.codeunits[filename] = codeunit
                 if function not in self.functions:
                     self.functions.append(function)

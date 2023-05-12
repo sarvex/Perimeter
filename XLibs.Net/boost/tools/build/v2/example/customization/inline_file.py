@@ -17,7 +17,7 @@ def quote_line(line):
             result = result + '\\\\'
         elif (i == '\"'):
             result = result + '\\\"'
-        elif (i != '\r' and i != '\n'):
+        elif i not in ['\r', '\n']:
             result = result + i;
 
     return '\"' + result + '\\n\"'

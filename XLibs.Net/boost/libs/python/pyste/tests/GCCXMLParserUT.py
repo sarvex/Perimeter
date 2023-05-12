@@ -11,7 +11,7 @@ class Tester(unittest.TestCase):
 
     def TestConstructor(self, class_, method, visib):
         self.assert_(isinstance(method, Constructor))
-        self.assertEqual(method.FullName(), class_.FullName() + '::' + method.name)
+        self.assertEqual(method.FullName(), f'{class_.FullName()}::{method.name}')
         self.assertEqual(method.result, None)
         self.assertEqual(method.visibility, visib)
         self.assert_(not method.virtual)
@@ -27,11 +27,12 @@ class Tester(unittest.TestCase):
         self.assertEqual(len(method.parameters), 1)
         param = method.parameters[0]
         self.TestType(
-            param, 
-            ReferenceType, 
-            class_.FullName(), 
-            'const %s&' % class_.FullName(),
-            True)
+            param,
+            ReferenceType,
+            class_.FullName(),
+            f'const {class_.FullName()}&',
+            True,
+        )
         self.assert_(method.IsCopy())
 
 
@@ -262,13 +263,13 @@ def GetXMLFile():
     '''Generates an gccxml file using the code from the global cppcode. 
     Returns the xml's filename.'''
     # write the code to a header file
-    tmpfile = tempfile.mktemp() + '.h'
+    tmpfile = f'{tempfile.mktemp()}.h'
     f = file(tmpfile, 'w')
     f.write(cppcode)
     f.close()
     # run gccxml
-    outfile = tmpfile + '.xml'
-    if os.system('gccxml "%s" "-fxml=%s"' % (tmpfile, outfile)) != 0:
+    outfile = f'{tmpfile}.xml'
+    if os.system(f'gccxml "{tmpfile}" "-fxml={outfile}"') != 0:
         raise RuntimeError, 'Error executing GCCXML.'
     # read the output file into the xmlcode
     f = file(outfile)
@@ -298,12 +299,12 @@ def GetDecl(name):
         if decl.name == name:
             return decl
     else:
-        raise RuntimeError, 'Declaration not found: %s' % name
+        raise (RuntimeError, f'Declaration not found: {name}')
 
 
 def GetMember(class_, name):
     'gets the member of the given class by its name'
-                
+
     res = None
     multipleFound = False
     for member in class_:
@@ -313,22 +314,21 @@ def GetMember(class_, name):
                 break
             res = member
     if res is None or multipleFound:
-        raise RuntimeError, \
-            'No member or more than one member found in class %s: %s' \
-                % (class_.name, name)
+        raise (
+            RuntimeError,
+            f'No member or more than one member found in class {class_.name}: {name}',
+        )
     return res            
     
 
 def GetMembers(class_, name):
     'gets the members of the given class by its name'
-    res = []
-    for member in class_:
-        if member.name == name:
-            res.append(member)
-    if len(res) in (0, 1):            
-        raise RuntimeError, \
-            'GetMembers: 0 or 1 members found in class %s: %s' \
-                % (class_.name, name)
+    res = [member for member in class_ if member.name == name]
+    if len(res) in {0, 1}:        
+        raise (
+            RuntimeError,
+            f'GetMembers: 0 or 1 members found in class {class_.name}: {name}',
+        )
     return res            
 
 

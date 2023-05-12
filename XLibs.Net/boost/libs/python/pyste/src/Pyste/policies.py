@@ -15,14 +15,10 @@ class Policy(object):
 
     def Code(self):
         'Returns the string corresponding to a instancialization of the policy.'
-        pass
         
 
     def _next(self):
-        if self.next is not None:
-            return ', %s >' % self.next.Code()
-        else:
-            return ' >'
+        return f', {self.next.Code()} >' if self.next is not None else ' >'
 
 
     def __eq__(self, other):
@@ -76,7 +72,7 @@ class return_value_policy(Policy):
 
 
     def Code(self):
-        c = 'return_value_policy< %s' % self.which
+        c = f'return_value_policy< {self.which}'
         c += self._next()
         return c
 

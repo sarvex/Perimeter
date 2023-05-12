@@ -54,8 +54,7 @@ def last_failed_test():
     "Returns the name of last failed test or None"
     try:
         f = open("test_results.txt")
-        s = string.strip(f.read())
-        return s
+        return string.strip(f.read())
     except:
         return None
 

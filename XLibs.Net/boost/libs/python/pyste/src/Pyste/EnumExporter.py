@@ -19,35 +19,33 @@ class EnumExporter(Exporter):
 
     def SetDeclarations(self, declarations):
         Exporter.SetDeclarations(self, declarations)
-        if self.declarations:
-            self.enum = self.GetDeclaration(self.info.name)
-        else:
-            self.enum = None
+        self.enum = self.GetDeclaration(self.info.name) if self.declarations else None
 
     def Export(self, codeunit, exported_names):
-        if not self.info.exclude:
-            indent = self.INDENT
-            in_indent = self.INDENT*2
-            rename = self.info.rename or self.enum.name
-            full_name = self.enum.FullName()
-            unnamed_enum = False
-            if rename.startswith('$_') or rename.startswith('._'):
-                unique_number = hash(self.info.include)
-                unnamed_enum = True
-                self.ExportUniqueInt(codeunit)
-                full_name = namespaces.pyste + 'UniqueInt<%d>' % unique_number
-                rename = "unnamed"
-            code = indent + namespaces.python
-            code += 'enum_< %s >("%s")\n' % (full_name, rename)
-            for name in self.enum.values:         
-                rename = self.info[name].rename or name
-                value_fullname = self.enum.ValueFullName(name)
-                code += in_indent + '.value("%s", %s)\n' % (rename, value_fullname)
-            if self.info.export_values or unnamed_enum:
-                code += in_indent + '.export_values()\n'
-            code += indent + ';\n\n'
-            codeunit.Write('module', code)
-            exported_names[self.enum.FullName()] = 1
+        if self.info.exclude:
+            return
+        indent = self.INDENT
+        in_indent = self.INDENT*2
+        rename = self.info.rename or self.enum.name
+        full_name = self.enum.FullName()
+        unnamed_enum = False
+        if rename.startswith('$_') or rename.startswith('._'):
+            unique_number = hash(self.info.include)
+            unnamed_enum = True
+            self.ExportUniqueInt(codeunit)
+            full_name = namespaces.pyste + 'UniqueInt<%d>' % unique_number
+            rename = "unnamed"
+        code = indent + namespaces.python
+        code += 'enum_< %s >("%s")\n' % (full_name, rename)
+        for name in self.enum.values:         
+            rename = self.info[name].rename or name
+            value_fullname = self.enum.ValueFullName(name)
+            code += in_indent + '.value("%s", %s)\n' % (rename, value_fullname)
+        if self.info.export_values or unnamed_enum:
+            code += in_indent + '.export_values()\n'
+        code += indent + ';\n\n'
+        codeunit.Write('module', code)
+        exported_names[self.enum.FullName()] = 1
 
 
     def ExportUniqueInt(self, codeunit):

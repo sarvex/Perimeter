@@ -152,18 +152,16 @@ class SVNTreeNode:
       self.children.append(newchild)
       newchild.path = os.path.join (self.path, newchild.name)      
 
-    # If you already have the node,
-    else:      
-      if newchild.children is None:
-        # this is the 'end' of the chain, so copy any content here.
-        a.contents = newchild.contents
-        a.props = newchild.props
-        a.atts = newchild.atts
-        a.path = os.path.join (self.path, newchild.name)
-      else:
-        # try to add dangling children to your matching node
-        for i in newchild.children:
-          a.add_child(i)
+    elif newchild.children is None:
+      # this is the 'end' of the chain, so copy any content here.
+      a.contents = newchild.contents
+      a.props = newchild.props
+      a.atts = newchild.atts
+      a.path = os.path.join (self.path, newchild.name)
+    else:
+      # try to add dangling children to your matching node
+      for i in newchild.children:
+        a.add_child(i)
 
 
   def pprint(self):
@@ -207,12 +205,9 @@ class SVNTreeIsNotDirectory(Exception): pass
 def attribute_merge(orighash, newhash):
   "Merge the attributes in NEWHASH into ORIGHASH."
 
-  if orighash.has_key('verb') and newhash.has_key('verb'):
-    # Special case: if a commit reports a node as "deleted", then
-    # "added", it's a replacment.
-    if orighash['verb'] == "Deleting":
-      if newhash['verb'] == "Adding":
-        orighash['verb'] = "Replacing"
+  if (orighash.has_key('verb') and newhash.has_key('verb')
+      and orighash['verb'] == "Deleting" and newhash['verb'] == "Adding"):
+    orighash['verb'] = "Replacing"
 
   # Add future stackable attributes here...
 
@@ -246,10 +241,7 @@ def node_is_greater(a, b):
   # Interal use only
   if a.name == b.name:
     return 0
-  if a.name > b.name:
-    return 1
-  else:
-    return -1
+  return 1 if a.name > b.name else -1
 
 
 # Helper for compare_trees
@@ -327,9 +319,8 @@ def get_text(path):
   if not os.path.isfile(path):
     return None
 
-  fp = open(path, 'r')
-  contents = fp.read()
-  fp.close()
+  with open(path, 'r') as fp:
+    contents = fp.read()
   return contents
 
 
@@ -352,10 +343,7 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
   # add each file as a child of CURRENT_PARENT
   for f in files:
     fcontents = get_text(f)
-    if load_props:
-      fprops = get_props(f)
-    else:
-      fprops = {}
+    fprops = get_props(f) if load_props else {}
     c = SVNTreeNode(os.path.basename(f), None,
                                          fcontents, fprops)
     c.mtime = os.stat(f)[stat.ST_MTIME]
@@ -363,10 +351,7 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
 
   # for each subdir, create a node, walk its tree, add it as a child
   for d in dirs:
-    if load_props:
-      dprops = get_props(d)
-    else:
-      dprops = {}
+    dprops = get_props(d) if load_props else {}
     new_dir_node = SVNTreeNode(os.path.basename(d), [], None, dprops)
     handle_dir(d, new_dir_node, load_props, ignore_svn)
     new_dir_node.mtime = os.stat(f)[stat.ST_MTIME]
@@ -376,12 +361,9 @@ def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;
   else, return None. If SVNTreeNode is not a directory, raise a
   SVNTreeIsNotDirectory exception"""
-  if node.children == None:
+  if node.children is None:
     raise SVNTreeIsNotDirectory
-  for n in node.children:
-    if (name == n.name):
-      return n
-  return None
+  return next((n for n in node.children if (name == n.name)), None)
 
 
 # Helper for compare_trees
@@ -563,12 +545,11 @@ def build_tree_from_checkout(lines):
 
   root = SVNTreeNode(root_node_name)
   rm = re.compile ('^([MAGCUD_ ][MAGCUD_ ]) (.+)')
-  
+
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(2), None, {},
-                                    {'status' : match.group(1)})
+      new_branch = create_from_path(match[2], None, {}, {'status': match[1]})
       root.add_child(new_branch)
 
   return root
@@ -585,14 +566,13 @@ def build_tree_from_commit(lines):
   root = SVNTreeNode(root_node_name)
   rm1 = re.compile ('^(\w+)\s+(.+)')
   rm2 = re.compile ('^Transmitting')
-  
+
   for line in lines:
     match = rm2.search(line)
     if not match:
       match = rm1.search(line)
       if match and match.groups():
-        new_branch = create_from_path(match.group(2), None, {},
-                                      {'verb' : match.group(1)})
+        new_branch = create_from_path(match[2], None, {}, {'verb': match[1]})
         root.add_child(new_branch)
 
   return root
@@ -613,25 +593,19 @@ def build_tree_from_status(lines):
   rm = re.compile ('^.+\:.+(\d+)')
   lastline = string.strip(lines.pop())
   match = rm.search(lastline)
-  if match and match.groups():
-    repos_rev = match.group(1)
-  else:
-    repos_rev = '?'
-    
+  repos_rev = match[1] if match and match.groups() else '?'
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
   rm = re.compile ('^([MACDRUG_ ][MACDRUG_ ])(.)(.)   .   [^0-9-]+(\d+|-)(.{23})(.+)')
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      if match.group(5) != '-': # ignore items that only exist on repos
-        atthash = {'status' : match.group(1),
-                   'wc_rev' : match.group(4),
-                   'repos_rev' : repos_rev}
-        if match.group(2) != ' ':
-          atthash['locked'] = match.group(2)
-        if match.group(3) != ' ':
-          atthash['copied'] = match.group(3)
-        new_branch = create_from_path(match.group(6), None, {}, atthash)
+      if match[5] != '-': # ignore items that only exist on repos
+        atthash = {'status': match[1], 'wc_rev': match[4], 'repos_rev': repos_rev}
+        if match[2] != ' ':
+          atthash['locked'] = match[2]
+        if match[3] != ' ':
+          atthash['copied'] = match[3]
+        new_branch = create_from_path(match[6], None, {}, atthash)
 
       root.add_child(new_branch)
 

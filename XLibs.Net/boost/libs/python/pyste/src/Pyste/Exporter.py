@@ -56,17 +56,15 @@ class Exporter(object):
         
     def Export(self, codeunit, exported_names):
         'subclasses must override this to do the real work'
-        pass
     
                     
     def GetDeclarations(self, fullname):
-        decls = []
-        for decl in self.declarations:
-            if decl.FullName() == fullname:
-                decls.append(decl)
-        if not decls:
-            raise RuntimeError, 'no %s declaration found!' % fullname
-        return decls
+        if decls := [
+            decl for decl in self.declarations if decl.FullName() == fullname
+        ]:
+            return decls
+        else:
+            raise (RuntimeError, f'no {fullname} declaration found!')
 
 
     def GetDeclaration(self, fullname):

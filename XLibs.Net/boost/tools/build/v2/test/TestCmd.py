@@ -82,10 +82,7 @@ def _caller(tblist, skip):
         arr = [(file, line, name, text)] + arr
     atfrom = "at"
     for file, line, name, text in arr[skip:]:
-        if name == "?":
-            name = ""
-        else:
-            name = " (" + name + ")"
+        name = "" if name == "?" else f" ({name})"
         string = string + ("%s line %d of %s%s\n" % (atfrom, line, file, name))
         atfrom = "\tfrom"
     return string
@@ -99,23 +96,29 @@ def fail_test(self = None, condition = 1, function = None, skip = 0):
     """
     if not condition:
         return
-    if not function is None:
+    if function is not None:
         function()
     of = ""
     desc = ""
     sep = " "
-    if not self is None:
+    if self is not None:
         if self.program:
             of = " of " + join(self.program, " ")
             sep = "\n\t"
         if self.description:
-            desc = " [" + self.description + "]"
+            desc = f" [{self.description}]"
             sep = "\n\t"
 
     at = _caller(traceback.extract_stack(), skip)
 
-    sys.stderr.write("FAILED test" + of + desc + sep + at + """
-in directory: """ + os.getcwd() )
+    sys.stderr.write(
+        (
+            f"FAILED test{of}{desc}{sep}{at}"
+            + """
+in directory: """
+        )
+        + os.getcwd()
+    )
 
     sys.exit(1)
 
@@ -128,21 +131,21 @@ def no_result(self = None, condition = 1, function = None, skip = 0):
     """
     if not condition:
         return
-    if not function is None:
+    if function is not None:
         function()
     of = ""
     desc = ""
     sep = " "
-    if not self is None:
+    if self is not None:
         if self.program:
-            of = " of " + self.program
+            of = f" of {self.program}"
             sep = "\n\t"
         if self.description:
-            desc = " [" + self.description + "]"
+            desc = f" [{self.description}]"
             sep = "\n\t"
 
     at = _caller(traceback.extract_stack(), skip)
-    sys.stderr.write("NO RESULT for test" + of + desc + sep + at)
+    sys.stderr.write(f"NO RESULT for test{of}{desc}{sep}{at}")
 
     sys.exit(2)
 
@@ -155,7 +158,7 @@ def pass_test(self = None, condition = 1, function = None):
     """
     if not condition:
         return
-    if not function is None:
+    if function is not None:
         function()
     sys.stderr.write("PASSED\n")
     sys.exit(0)
@@ -163,9 +166,9 @@ def pass_test(self = None, condition = 1, function = None):
 def match_exact(lines = None, matches = None):
     """
     """
-    if not type(lines) is ListType:
+    if type(lines) is not ListType:
         lines = split(lines, "\n")
-    if not type(matches) is ListType:
+    if type(matches) is not ListType:
         matches = split(matches, "\n")
     if len(lines) != len(matches):
         return
@@ -177,14 +180,14 @@ def match_exact(lines = None, matches = None):
 def match_re(lines = None, res = None):
     """
     """
-    if not type(lines) is ListType:
+    if type(lines) is not ListType:
         lines = split(lines, "\n")
-    if not type(res) is ListType:
+    if type(res) is not ListType:
         res = split(res, "\n")
     if len(lines) != len(res):
         return
     for i in range(len(lines)):
-        if not re.compile("^" + res[i] + "$").search(lines[i]):
+        if not re.compile(f"^{res[i]}$").search(lines[i]):
             return
     return 1
 
@@ -204,13 +207,10 @@ class TestCmd:
         self.program_set(program)
         self.interpreter_set(interpreter)
         self.verbose_set(verbose)
-        if not match is None:
-            self.match_func = match
-        else:
-            self.match_func = match_re
+        self.match_func = match if match is not None else match_re
         self._dirlist = []
         self._preserve = {'pass_test': 0, 'fail_test': 0, 'no_result': 0}
-        if os.environ.has_key('PRESERVE') and not os.environ['PRESERVE'] is '':
+        if os.environ.has_key('PRESERVE') and os.environ['PRESERVE'] is not '':
             self._preserve['pass_test'] = os.environ['PRESERVE']
             self._preserve['fail_test'] = os.environ['PRESERVE']
             self._preserve['no_result'] = os.environ['PRESERVE']
@@ -388,7 +388,7 @@ class TestCmd:
             if not os.path.isabs(chdir):
                 chdir = os.path.join(self.workpath(chdir))
             if self.verbose:
-                sys.stderr.write("chdir(" + chdir + ")\n")
+                sys.stderr.write(f"chdir({chdir}" + ")\n")
             os.chdir(chdir)
         cmd = []
         if program and program[0]:
@@ -435,11 +435,11 @@ class TestCmd:
             self._stdout.append(p.fromchild.read())
             self._stderr.append(p.childerr.read())
             self.status = p.wait()
-            
+
         if self.verbose:
             sys.stdout.write(self._stdout[-1])
             sys.stderr.write(self._stderr[-1])
-            
+
         if chdir:
             os.chdir(oldcwd)
 
@@ -455,9 +455,7 @@ class TestCmd:
         elif run < 0:
             run = len(self._stderr) + run
         run = run - 1
-        if (run < 0):
-            return ''
-        return self._stderr[run]
+        return '' if (run < 0) else self._stderr[run]
 
     def stdout(self, run = None):
         """Returns the standard output from the specified run number.
@@ -471,9 +469,7 @@ class TestCmd:
         elif run < 0:
             run = len(self._stdout) + run
         run = run - 1
-        if (run < 0):
-            return ''
-        return self._stdout[run]
+        return '' if (run < 0) else self._stdout[run]
 
     def subdir(self, *subdirs):
         """Create new subdirectories under the temporary working

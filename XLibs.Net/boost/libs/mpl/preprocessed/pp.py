@@ -27,43 +27,42 @@ def nearest_ident_pos(text):
     
 def block_format(limits,text,first_sep='  ',sep=',',need_last_ident=1):
     words = string.split(
-          string.join(string.split(text),' ')
-        , if_else(sep != ',' or string.find(text,'<') == -1,sep,' %s '%sep)
-        )
-    s = reduce(lambda t,x: '%s '%t, range(0,limits[0]), '')
+        string.join(string.split(text), ' '),
+        if_else(sep != ',' or string.find(text, '<') == -1, sep, f' {sep} '),
+    )
+    s = reduce(lambda t,x: f'{t} ', range(0,limits[0]), '')
     max_len = limits[1]
-    return '%s\n%s' \
-        % (
-         reduce(
-            lambda t,w,max_len=max_len,s=s,sep=sep:
-                if_else(t[1] + len(w) < max_len
-                    , ('%s%s%s'% (t[0],t[2],w), t[1]+len(w)+len(t[2]), sep)
-                    , ('%s\n%s%s%s'% (t[0],s,sep,w), len(s)+len(w)+len(sep), sep)
-                    )
-            , words
-            , (s,len(s)+len(first_sep),first_sep)
-            )[0]
-        , if_else(need_last_ident,s,'')
-        )
+    return '%s\n%s' % (
+        reduce(
+            lambda t, w, max_len=max_len, s=s, sep=sep: if_else(
+                t[1] + len(w) < max_len,
+                (f'{t[0]}{t[2]}{w}', t[1] + len(w) + len(t[2]), sep),
+                (
+                    '%s\n%s%s%s' % (t[0], s, sep, w),
+                    len(s) + len(w) + len(sep),
+                    sep,
+                ),
+            ),
+            words,
+            (s, len(s) + len(first_sep), first_sep),
+        )[0],
+        if_else(need_last_ident, s, ''),
+    )
 
 def handle_args(match):
-    if re.compile('^\s*(typedef|struct|static)\s+.*?$').match(match.group(0)):
-        return match.group(0)
-    
-    return '%s'\
-        % block_format(
-              (nearest_ident_pos(match.group(1)),max_len)
-            , match.group(3)
-            , match.group(2)
-            , ','
-            , 0
-            )
+    return (
+        match.group(0)
+        if re.compile('^\s*(typedef|struct|static)\s+.*?$').match(
+            match.group(0)
+        )
+        else f"{block_format((nearest_ident_pos(match.group(1)), max_len), match.group(3), match.group(2), ',', 0)}"
+    )
 
 def handle_inline_args(match):
     if len(match.group(0)) < max_len:
         return match.group(0)
 
-    if match.group(9) == None:
+    if match.group(9) is None:
         return '%s%s<\n%s>\n'\
             % (
                   match.group(1)
@@ -73,7 +72,7 @@ def handle_inline_args(match):
                     , match.group(4)
                     )
             )
-        
+
     return '%s%s<\n%s>\n%s%s'\
         % (
               match.group(1)

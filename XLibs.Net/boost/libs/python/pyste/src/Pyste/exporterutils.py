@@ -27,10 +27,7 @@ class FunctionWrapper(object):
         self.code = code
 
     def FullName(self):
-        if self.code:
-            return namespaces.pyste + self.name
-        else:
-            return self.name
+        return namespaces.pyste + self.name if self.code else self.name
 
 
 _printed_warnings = {} # used to avoid double-prints of warnings
@@ -80,8 +77,7 @@ _exported_type_ids = {}
 def EspecializeTypeID(typename):
     global _exported_type_ids
     macro = 'BOOST_PYTHON_OPAQUE_SPECIALIZED_TYPE_ID(%s)\n' % typename
-    if macro not in _exported_type_ids:
-        _exported_type_ids[macro] = 1
-        return macro
-    else:
+    if macro in _exported_type_ids:
         return None
+    _exported_type_ids[macro] = 1
+    return macro
